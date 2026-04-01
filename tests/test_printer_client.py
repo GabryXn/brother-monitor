@@ -1,6 +1,7 @@
 # tests/test_printer_client.py
 import pytest
-from printer_client import _parse_info, _parse_status, PrinterData
+from unittest.mock import patch, MagicMock
+from printer_client import _parse_info, _parse_status, PrinterData, PrinterClient
 from tests.conftest import INFO_HTML_FIXTURE, STATUS_HTML_OK, STATUS_HTML_IDLE, STATUS_HTML_ERROR
 
 
@@ -62,3 +63,31 @@ def test_parse_status_error():
     data = PrinterData()
     _parse_status(STATUS_HTML_ERROR, data)
     assert data.status == "error"
+
+
+def _mock_response(text: str) -> MagicMock:
+    resp = MagicMock()
+    resp.text = text
+    return resp
+
+
+def test_fetch_returns_data_when_online():
+    with patch("printer_client.requests.get") as mock_get:
+        mock_get.side_effect = [
+            _mock_response(INFO_HTML_FIXTURE),
+            _mock_response(STATUS_HTML_IDLE),
+        ]
+        client = PrinterClient(base_url="http://fake:9999")
+        data = client.fetch()
+    assert data.toner_pct == 40
+    assert data.drum_pct == 88
+    assert data.status == "idle"
+
+
+def test_fetch_returns_offline_on_connection_error():
+    import requests as req
+    with patch("printer_client.requests.get", side_effect=req.exceptions.ConnectionError):
+        client = PrinterClient(base_url="http://fake:9999")
+        data = client.fetch()
+    assert data.status == "offline"
+    assert data.toner_pct == 0
