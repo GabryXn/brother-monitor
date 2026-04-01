@@ -21,10 +21,10 @@ class PrinterData:
     memory_mb: int = 0
     page_count: int = 0
     avg_coverage: float = 0.0
-    errors: list = field(default_factory=list)   # [{"desc": str, "page": int}]
-    jams: dict = field(default_factory=dict)
-    replace_counts: dict = field(default_factory=dict)
-    page_stats: dict = field(default_factory=dict)
+    errors: list[dict[str, str | int]] = field(default_factory=list)   # [{"desc": str, "page": int}]
+    jams: dict[str, int] = field(default_factory=dict)
+    replace_counts: dict[str, int] = field(default_factory=dict)
+    page_stats: dict[str, int] = field(default_factory=dict)  # reserved for future per-tray page counts
 
 
 class PrinterClient:

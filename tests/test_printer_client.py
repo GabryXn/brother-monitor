@@ -29,7 +29,7 @@ def test_parse_info_jams():
     assert data.jams["total"] == 2
     assert data.jams["tray1"] == 1
     assert data.jams["inside"] == 1
-    assert data.jams.get("rear", 0) == 0
+    assert data.jams["rear"] == 0
 
 
 def test_parse_info_replace_counts():
