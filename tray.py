@@ -95,7 +95,8 @@ class BrotherTray(QSystemTrayIcon):
             menu = self.contextMenu()
             # Insert per-printer items before the existing _act_status
             for _ in printer_cfgs:
-                act = menu.insertAction(self._act_status, menu.addAction(""))
+                act = menu.addAction("")
+                menu.insertAction(self._act_status, act)
                 act.setEnabled(False)
                 self._printer_actions.append(act)
             self._act_status.setVisible(False)  # hide the old single-printer item
