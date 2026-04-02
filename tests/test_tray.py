@@ -12,7 +12,7 @@ from config import AppConfig, PrinterConfig
 @pytest.fixture
 def window(qtbot):
     cfg = AppConfig(printers=[PrinterConfig()])
-    w = MainWindow(cfg, cfg.printers[0])
+    w = MainWindow(cfg)
     qtbot.addWidget(w)
     return w
 

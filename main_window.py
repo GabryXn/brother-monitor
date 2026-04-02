@@ -40,20 +40,57 @@ class MainWindow(QMainWindow):
     refresh_interval_changed = pyqtSignal(int)
     config_saved = pyqtSignal(AppConfig)
     clear_history_requested = pyqtSignal()
+    printer_selected = pyqtSignal(int)
 
-    def __init__(self, cfg: AppConfig, printer_cfg: PrinterConfig, parent=None):
+    def __init__(self, cfg: AppConfig, parent=None):
         super().__init__(parent)
         self._cfg = cfg
-        self._printer_cfg = printer_cfg
+        self._printer_cfg = cfg.printers[0]
         self.setWindowTitle("Printer Monitor")
-        self.setMinimumSize(520, 520)
+        self.setMinimumSize(520, 560)
+
+        root = QVBoxLayout()
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # Printer selector (visible only when more than 1 printer)
+        if len(cfg.printers) > 1:
+            selector_bar = QWidget()
+            selector_bar.setStyleSheet("background: #f5f5f5; border-bottom: 1px solid #ddd;")
+            sl = QHBoxLayout(selector_bar)
+            sl.setContentsMargins(12, 6, 12, 6)
+            sl.addWidget(QLabel("Stampante:"))
+            self._combo_printers = QComboBox()
+            for p in cfg.printers:
+                self._combo_printers.addItem(p.name)
+            self._combo_printers.currentIndexChanged.connect(self._on_printer_changed)
+            sl.addWidget(self._combo_printers)
+            sl.addStretch()
+            root.addWidget(selector_bar)
 
         tabs = QTabWidget()
         tabs.addTab(self._build_status_tab(),   "Stato")
         tabs.addTab(self._build_stats_tab(),    "Statistiche")
         tabs.addTab(self._build_history_tab(),  "Storico")
         tabs.addTab(self._build_settings_tab(), "Impostazioni")
-        self.setCentralWidget(tabs)
+        root.addWidget(tabs)
+
+        container = QWidget()
+        container.setLayout(root)
+        self.setCentralWidget(container)
+
+    # ------------------------------------------------------------------ #
+    #  Printer selector helpers                                           #
+    # ------------------------------------------------------------------ #
+
+    def _on_printer_changed(self, idx: int) -> None:
+        self._printer_cfg = self._cfg.printers[idx]
+        self.printer_selected.emit(idx)
+
+    def selected_printer_index(self) -> int:
+        if hasattr(self, "_combo_printers"):
+            return self._combo_printers.currentIndex()
+        return 0
 
     # ------------------------------------------------------------------ #
     #  Tab Stato                                                           #

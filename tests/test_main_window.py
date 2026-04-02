@@ -17,8 +17,8 @@ def cfg(printer_cfg):
 
 
 @pytest.fixture
-def window(qtbot, cfg, printer_cfg):
-    w = MainWindow(cfg, printer_cfg)
+def window(qtbot, cfg):
+    w = MainWindow(cfg)
     qtbot.addWidget(w)
     return w
 

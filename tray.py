@@ -87,6 +87,46 @@ class BrotherTray(QSystemTrayIcon):
             f"{display}  •  Toner: {data.toner_pct}%  •  Tamburo: {data.drum_pct}%"
         )
 
+    def update_all_statuses(self, data_list: list, printer_cfgs: list) -> None:
+        """Update tray icon (worst state) and per-printer menu items."""
+        # Update or create per-printer status actions
+        if not hasattr(self, "_printer_actions"):
+            self._printer_actions: list = []
+            menu = self.contextMenu()
+            # Insert per-printer items before the existing _act_status
+            for _ in printer_cfgs:
+                act = menu.insertAction(self._act_status, menu.addAction(""))
+                act.setEnabled(False)
+                self._printer_actions.append(act)
+            self._act_status.setVisible(False)  # hide the old single-printer item
+
+        _label = {"idle": "Pronto", "sleep": "Risparmio",
+                  "printing": "Stampa...", "error": "Errore", "offline": "Offline"}
+
+        worst = "idle"
+        _priority = {"error": 3, "offline": 3, "printing": 2, "sleep": 1, "idle": 0}
+
+        for i, (data, cfg) in enumerate(zip(data_list, printer_cfgs)):
+            if i < len(self._printer_actions):
+                status_str = _label.get(data.status, data.status)
+                self._printer_actions[i].setText(
+                    f"● {cfg.name}  {status_str}  "
+                    f"T:{data.toner_pct}%  D:{data.drum_pct}%")
+            if _priority.get(data.status, 0) > _priority.get(worst, 0):
+                worst = data.status
+
+        if worst in ("error", "offline"):
+            self.setIcon(self._icon_err)
+        elif any((d.toner_pct < 15 or d.drum_pct < 10) for d in data_list):
+            self.setIcon(self._icon_warn)
+        else:
+            self.setIcon(self._icon_ok)
+
+        # Build combined tooltip
+        lines = [f"{c.name}: T:{d.toner_pct}% D:{d.drum_pct}%"
+                 for d, c in zip(data_list, printer_cfgs)]
+        self.setToolTip("\n".join(lines))
+
     def notify(self, key: str, title: str, message: str,
                level: QSystemTrayIcon.MessageIcon = LEVEL_WARN) -> None:
         now = time.monotonic()

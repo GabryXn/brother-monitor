@@ -62,42 +62,70 @@ def main() -> None:
     app.setOrganizationName(ORG_NAME)
     app.setQuitOnLastWindowClosed(False)
 
-    cfg = load_config()
+    cfg     = load_config()
+    history_db = HistoryDB()
+    drivers = [_make_driver(p) for p in cfg.printers]
 
-    # Use first printer for single-printer mode (Task 7 will extend to multi)
-    printer_cfg = cfg.printers[0]
-    driver = _make_driver(printer_cfg)
+    # data_cache holds the latest PrinterData per printer index
+    data_cache: list[PrinterData] = [PrinterData() for _ in cfg.printers]
 
-    window = MainWindow(cfg, printer_cfg)
+    window = MainWindow(cfg)
     tray   = BrotherTray(window)
     tray.show()
-    history_db = HistoryDB()
 
-    def do_refresh() -> None:
-        data = driver.fetch()
+    def do_refresh(idx: int) -> None:
+        data = drivers[idx].fetch()
         ts   = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        window.update_data(data, ts)
-        tray.update_status(data, printer_cfg.name)
-        _check_notifications(tray, data, printer_cfg, printer_cfg.name)
+        data_cache[idx] = data
+        printer_cfg = cfg.printers[idx]
         history_db.record(printer_cfg.name, data)
-        window.update_history(history_db.get_recent(printer_cfg.name, limit=200))
+        # Update UI only if this printer is currently selected
+        if window.selected_printer_index() == idx:
+            window.update_data(data, ts)
+            window.update_history(
+                history_db.get_recent(printer_cfg.name, limit=200))
+        tray.update_all_statuses(data_cache, cfg.printers)
+        _check_notifications(tray, data, printer_cfg, printer_cfg.name)
 
-    window.refresh_requested.connect(do_refresh)
-    tray._act_refresh.triggered.connect(do_refresh)
+    timers: list[QTimer] = []
+    for i, printer_cfg in enumerate(cfg.printers):
+        t = QTimer()
+        t.timeout.connect(lambda _i=i: do_refresh(_i))
+        t.start(printer_cfg.polling_interval_sec * 1000)
+        timers.append(t)
 
-    poll_timer = QTimer()
-    poll_timer.timeout.connect(do_refresh)
-    poll_timer.start(printer_cfg.polling_interval_sec * 1000)
+    def refresh_selected():
+        do_refresh(window.selected_printer_index())
+
+    window.refresh_requested.connect(refresh_selected)
+    tray._act_refresh.triggered.connect(refresh_selected)
 
     window.refresh_interval_changed.connect(
-        lambda secs: poll_timer.setInterval(secs * 1000))
+        lambda secs: timers[window.selected_printer_index()].setInterval(secs * 1000))
 
     window.config_saved.connect(lambda new_cfg: save_config(new_cfg))
 
-    window.clear_history_requested.connect(
-        lambda: history_db.clear(printer_cfg.name))
+    window.printer_selected.connect(
+        lambda idx: (
+            window.update_data(
+                data_cache[idx],
+                "—" if data_cache[idx].status == "offline" else
+                datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            ),
+            window.update_history(
+                history_db.get_recent(cfg.printers[idx].name, limit=200)
+            )
+        )
+    )
 
-    do_refresh()
+    window.clear_history_requested.connect(
+        lambda: history_db.clear(
+            cfg.printers[window.selected_printer_index()].name))
+
+    # Initial fetch for all printers
+    for i in range(len(cfg.printers)):
+        do_refresh(i)
+
     sys.exit(app.exec())
 
 
