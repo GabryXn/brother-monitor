@@ -1,6 +1,7 @@
 # main_window.py
 from __future__ import annotations
 import subprocess
+import sys
 import webbrowser
 from pathlib import Path
 
@@ -10,21 +11,13 @@ from PyQt6.QtWidgets import (
     QCheckBox, QComboBox, QGroupBox, QFormLayout, QHeaderView,
     QScrollArea, QFrame, QSizePolicy,
 )
-from PyQt6.QtCore import Qt, QSettings, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 
-from widgets import CircularGauge
+from config import AppConfig, PrinterConfig
 from drivers.base import PrinterData
+from widgets import CircularGauge
 
-AUTOSTART_PATH = Path.home() / ".config/autostart/brother-monitor.desktop"
-AUTOSTART_CONTENT = """\
-[Desktop Entry]
-Type=Application
-Name=Brother Monitor
-Exec=/usr/local/bin/brother-monitor
-Icon=printer
-Comment=Monitoraggio stampante Brother DCP-L2550DN
-X-KDE-autostart-enabled=true
-"""
+AUTOSTART_PATH = Path.home() / ".config/autostart/printer-monitor.desktop"
 
 _STATUS_COLOR = {
     "idle":     "#4caf50",
@@ -44,12 +37,14 @@ _STATUS_LABEL = {
 
 class MainWindow(QMainWindow):
     refresh_requested = pyqtSignal()
-    refresh_interval_changed = pyqtSignal(int)   # secondi
+    refresh_interval_changed = pyqtSignal(int)
+    config_saved = pyqtSignal(AppConfig)
 
-    def __init__(self, settings: QSettings, parent=None):
+    def __init__(self, cfg: AppConfig, printer_cfg: PrinterConfig, parent=None):
         super().__init__(parent)
-        self.settings = settings
-        self.setWindowTitle("Brother Monitor — DCP-L2550DN")
+        self._cfg = cfg
+        self._printer_cfg = printer_cfg
+        self.setWindowTitle("Printer Monitor")
         self.setMinimumSize(520, 520)
 
         tabs = QTabWidget()
@@ -68,8 +63,7 @@ class MainWindow(QMainWindow):
         root.setSpacing(10)
         root.setContentsMargins(16, 16, 16, 12)
 
-        # Header --------------------------------------------------------
-        self.lbl_model = QLabel("Brother DCP-L2550DN")
+        self.lbl_model = QLabel(self._printer_cfg.name)
         self.lbl_model.setStyleSheet("font-size: 15px; font-weight: bold;")
         self.lbl_serial = QLabel("S/N: —  |  Firmware: —  |  RAM: — MB")
         self.lbl_serial.setStyleSheet("color: gray; font-size: 10px;")
@@ -94,7 +88,6 @@ class MainWindow(QMainWindow):
         line.setFrameShadow(QFrame.Shadow.Sunken)
         root.addWidget(line)
 
-        # Gauges --------------------------------------------------------
         self.gauge_toner = CircularGauge("Toner")
         self.gauge_drum  = CircularGauge("Tamburo")
         gauges = QHBoxLayout()
@@ -106,7 +99,6 @@ class MainWindow(QMainWindow):
         root.addLayout(gauges)
         root.addStretch()
 
-        # Footer --------------------------------------------------------
         self.lbl_updated = QLabel("Ultimo aggiornamento: —")
         self.lbl_updated.setStyleSheet("color: gray; font-size: 10px;")
         btn_refresh = QPushButton("Aggiorna ora")
@@ -139,7 +131,6 @@ class MainWindow(QMainWindow):
         layout.setSpacing(10)
         layout.setContentsMargins(12, 12, 12, 12)
 
-        # Pagine
         pg = QGroupBox("Pagine stampate")
         pf = QFormLayout(pg)
         self.lbl_pages_total  = QLabel("—")
@@ -147,14 +138,13 @@ class MainWindow(QMainWindow):
         self.lbl_pages_copy   = QLabel("—")
         self.lbl_pages_scan   = QLabel("—")
         self.lbl_coverage     = QLabel("—")
-        pf.addRow("Totale:",               self.lbl_pages_total)
-        pf.addRow("Fronte/retro:",         self.lbl_pages_duplex)
-        pf.addRow("Copie:",                self.lbl_pages_copy)
-        pf.addRow("Scansioni:",            self.lbl_pages_scan)
+        pf.addRow("Totale:",                self.lbl_pages_total)
+        pf.addRow("Fronte/retro:",          self.lbl_pages_duplex)
+        pf.addRow("Copie:",                 self.lbl_pages_copy)
+        pf.addRow("Scansioni:",             self.lbl_pages_scan)
         pf.addRow("Copertura media toner:", self.lbl_coverage)
         layout.addWidget(pg)
 
-        # Info dispositivo
         dev = QGroupBox("Informazioni dispositivo")
         df = QFormLayout(dev)
         self.lbl_dev_serial   = QLabel("—")
@@ -165,29 +155,26 @@ class MainWindow(QMainWindow):
         df.addRow("Memoria:",        self.lbl_dev_memory)
         layout.addWidget(dev)
 
-        # Inceppamenti
         jg = QGroupBox("Inceppamenti carta")
         jf = QFormLayout(jg)
         self.lbl_jams_total  = QLabel("—")
         self.lbl_jams_tray1  = QLabel("—")
         self.lbl_jams_inside = QLabel("—")
         self.lbl_jams_rear   = QLabel("—")
-        jf.addRow("Totale:",        self.lbl_jams_total)
-        jf.addRow("Vassoio 1:",     self.lbl_jams_tray1)
-        jf.addRow("Interno:",       self.lbl_jams_inside)
-        jf.addRow("Posteriore:",    self.lbl_jams_rear)
+        jf.addRow("Totale:",     self.lbl_jams_total)
+        jf.addRow("Vassoio 1:", self.lbl_jams_tray1)
+        jf.addRow("Interno:",   self.lbl_jams_inside)
+        jf.addRow("Posteriore:", self.lbl_jams_rear)
         layout.addWidget(jg)
 
-        # Sostituzioni
         rg = QGroupBox("Sostituzioni componenti")
         rf = QFormLayout(rg)
         self.lbl_replace_toner = QLabel("—")
         self.lbl_replace_drum  = QLabel("—")
-        rf.addRow("Toner sostituiti:",  self.lbl_replace_toner)
+        rf.addRow("Toner sostituiti:",   self.lbl_replace_toner)
         rf.addRow("Tamburi sostituiti:", self.lbl_replace_drum)
         layout.addWidget(rg)
 
-        # Storico errori
         eg = QGroupBox("Storico errori (ultimi 10)")
         el = QVBoxLayout(eg)
         self.tbl_errors = QTableWidget(0, 2)
@@ -216,19 +203,15 @@ class MainWindow(QMainWindow):
         layout.setSpacing(10)
         layout.setContentsMargins(12, 12, 12, 12)
 
-        # Notifiche
         ng = QGroupBox("Notifiche")
         nf = QFormLayout(ng)
-
         self.chk_notifications = QCheckBox("Abilita notifiche")
-        self.chk_notifications.setChecked(
-            self.settings.value("notifications/enabled", True, type=bool))
+        self.chk_notifications.setChecked(self._printer_cfg.notifications.enabled)
         nf.addRow(self.chk_notifications)
 
         self.slider_toner = QSlider(Qt.Orientation.Horizontal)
         self.slider_toner.setRange(5, 50)
-        self.slider_toner.setValue(
-            self.settings.value("notifications/toner_threshold", 20, type=int))
+        self.slider_toner.setValue(self._printer_cfg.notifications.toner_threshold)
         self.lbl_toner_thresh = QLabel(f"{self.slider_toner.value()}%")
         self.slider_toner.valueChanged.connect(
             lambda v: self.lbl_toner_thresh.setText(f"{v}%"))
@@ -239,8 +222,7 @@ class MainWindow(QMainWindow):
 
         self.slider_drum = QSlider(Qt.Orientation.Horizontal)
         self.slider_drum.setRange(5, 30)
-        self.slider_drum.setValue(
-            self.settings.value("notifications/drum_threshold", 15, type=int))
+        self.slider_drum.setValue(self._printer_cfg.notifications.drum_threshold)
         self.lbl_drum_thresh = QLabel(f"{self.slider_drum.value()}%")
         self.slider_drum.valueChanged.connect(
             lambda v: self.lbl_drum_thresh.setText(f"{v}%"))
@@ -250,17 +232,15 @@ class MainWindow(QMainWindow):
         nf.addRow("Soglia tamburo:", d_row)
         layout.addWidget(ng)
 
-        # Polling
         pg = QGroupBox("Aggiornamento automatico")
         pf = QFormLayout(pg)
         self.combo_interval = QComboBox()
         self.combo_interval.addItems(["30 secondi", "1 minuto", "5 minuti"])
-        interval = self.settings.value("polling/interval_sec", 60, type=int)
-        self.combo_interval.setCurrentIndex({30: 0, 60: 1, 300: 2}.get(interval, 1))
+        self.combo_interval.setCurrentIndex(
+            {30: 0, 60: 1, 300: 2}.get(self._printer_cfg.polling_interval_sec, 1))
         pf.addRow("Intervallo:", self.combo_interval)
         layout.addWidget(pg)
 
-        # Sistema
         sg = QGroupBox("Sistema")
         sl = QVBoxLayout(sg)
         self.chk_autostart = QCheckBox("Avvia automaticamente al login")
@@ -269,25 +249,23 @@ class MainWindow(QMainWindow):
         sl.addWidget(self.chk_autostart)
         layout.addWidget(sg)
 
-        # Azioni
         ag = QGroupBox("Azioni")
         al = QVBoxLayout(ag)
-        btn_web = QPushButton("Apri interfaccia web Brother")
+        btn_web = QPushButton("Apri interfaccia web")
         btn_web.clicked.connect(
-            lambda: webbrowser.open("http://localhost:60000/general/status.html"))
+            lambda: webbrowser.open(
+                f"{self._printer_cfg.url}/general/status.html"))
         btn_test = QPushButton("Stampa pagina di prova")
         btn_test.clicked.connect(self._print_test_page)
         al.addWidget(btn_web)
         al.addWidget(btn_test)
         layout.addWidget(ag)
 
-        # Salva
         btn_save = QPushButton("Salva impostazioni")
         btn_save.setObjectName("btn_save")
         btn_save.clicked.connect(self._save_settings)
         layout.addWidget(btn_save)
         layout.addStretch()
-
         return widget
 
     # ------------------------------------------------------------------ #
@@ -297,36 +275,47 @@ class MainWindow(QMainWindow):
     def _toggle_autostart(self, enabled: bool) -> None:
         AUTOSTART_PATH.parent.mkdir(parents=True, exist_ok=True)
         if enabled:
-            AUTOSTART_PATH.write_text(AUTOSTART_CONTENT)
+            exec_path = sys.executable + " " + str(
+                Path(__file__).resolve().parent / "brother_monitor.py")
+            content = (
+                "[Desktop Entry]\n"
+                "Type=Application\n"
+                "Name=Printer Monitor\n"
+                f"Exec={exec_path}\n"
+                "Icon=printer\n"
+                "Comment=Monitoraggio stampanti\n"
+                "X-KDE-autostart-enabled=true\n"
+            )
+            AUTOSTART_PATH.write_text(content)
         else:
             AUTOSTART_PATH.unlink(missing_ok=True)
 
     def _print_test_page(self) -> None:
+        cups = self._printer_cfg.cups_printer
+        if not cups:
+            return
         subprocess.Popen([
-            "lp", "-d", "Brother_DCP_L2550DN",
+            "lp", "-d", cups,
             "-o", "media=A4",
             "-o", "fit-to-page",
             "/usr/share/cups/data/testprint",
         ])
 
     def _save_settings(self) -> None:
-        self.settings.setValue("notifications/enabled",
-                               self.chk_notifications.isChecked())
-        self.settings.setValue("notifications/toner_threshold",
-                               self.slider_toner.value())
-        self.settings.setValue("notifications/drum_threshold",
-                               self.slider_drum.value())
+        n = self._printer_cfg.notifications
+        n.enabled = self.chk_notifications.isChecked()
+        n.toner_threshold = self.slider_toner.value()
+        n.drum_threshold  = self.slider_drum.value()
         secs = {0: 30, 1: 60, 2: 300}[self.combo_interval.currentIndex()]
-        self.settings.setValue("polling/interval_sec", secs)
-        self.settings.sync()
+        self._printer_cfg.polling_interval_sec = secs
         self.refresh_interval_changed.emit(secs)
+        self.config_saved.emit(self._cfg)
 
     # ------------------------------------------------------------------ #
-    #  Update UI con dati stampante                                        #
+    #  Update UI                                                           #
     # ------------------------------------------------------------------ #
 
     def update_data(self, data: PrinterData, timestamp: str) -> None:
-        # Tab Stato
         if data.model:
             self.lbl_model.setText(data.model)
         info_parts = []
@@ -347,7 +336,6 @@ class MainWindow(QMainWindow):
         self.gauge_drum.set_value(data.drum_pct)
         self.lbl_updated.setText(f"Ultimo aggiornamento: {timestamp}")
 
-        # Tab Statistiche
         self.lbl_pages_total.setText(str(data.page_count))
         self.lbl_coverage.setText(f"{data.avg_coverage:.2f}%")
         ps = data.page_stats
@@ -378,6 +366,5 @@ class MainWindow(QMainWindow):
             self.tbl_errors.setItem(i, 1, QTableWidgetItem(str(err.get("page", 0))))
 
     def closeEvent(self, event) -> None:
-        # X nasconde la finestra, il processo resta nel tray
         event.ignore()
         self.hide()

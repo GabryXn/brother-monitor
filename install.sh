@@ -7,8 +7,9 @@ BIN_PATH="/usr/local/bin/brother-monitor"
 echo "==> Installazione Brother Monitor..."
 
 sudo mkdir -p "$INSTALL_DIR"
-sudo cp -- brother_monitor.py printer_client.py main_window.py tray.py widgets.py \
-     "$INSTALL_DIR/"
+sudo cp -- brother_monitor.py config.py history.py \
+           main_window.py tray.py widgets.py "$INSTALL_DIR/"
+sudo cp -r drivers "$INSTALL_DIR/"
 
 # Script wrapper che imposta il PYTHONPATH corretto
 sudo tee "$BIN_PATH" > /dev/null << 'EOF'
@@ -27,7 +28,7 @@ Type=Application
 Name=Brother Monitor
 Exec=$BIN_PATH
 Icon=printer
-Comment=Monitoraggio stampante Brother DCP-L2550DN
+Comment=Monitoraggio stampanti di rete
 X-KDE-autostart-enabled=true
 EOF
 

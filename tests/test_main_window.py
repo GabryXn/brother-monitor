@@ -1,20 +1,24 @@
 # tests/test_main_window.py
 import pytest
 from PyQt6.QtWidgets import QTabWidget
-from PyQt6.QtCore import QSettings
+from config import AppConfig, PrinterConfig
 from main_window import MainWindow
 from drivers.base import PrinterData
 
 
 @pytest.fixture
-def settings(tmp_path):
-    s = QSettings(str(tmp_path / "test.ini"), QSettings.Format.IniFormat)
-    return s
+def printer_cfg():
+    return PrinterConfig()
 
 
 @pytest.fixture
-def window(qtbot, settings):
-    w = MainWindow(settings)
+def cfg(printer_cfg):
+    return AppConfig(printers=[printer_cfg])
+
+
+@pytest.fixture
+def window(qtbot, cfg, printer_cfg):
+    w = MainWindow(cfg, printer_cfg)
     qtbot.addWidget(w)
     return w
 

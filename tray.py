@@ -69,11 +69,12 @@ class BrotherTray(QSystemTrayIcon):
 
     # ------------------------------------------------------------------ #
 
-    def update_status(self, data: PrinterData) -> None:
-        _label = {"idle": "Pronto", "sleep": "Risparmio",
-                  "printing": "Stampa in corso...",
-                  "error": "Errore", "offline": "Offline"}
-        self._act_status.setText(f"Stato: {_label.get(data.status, data.status)}")
+    def update_status(self, data: PrinterData, printer_name: str = "") -> None:
+        label = {"idle": "Pronto", "sleep": "Risparmio",
+                 "printing": "Stampa in corso...",
+                 "error": "Errore", "offline": "Offline"}
+        display = printer_name or "Stampante"
+        self._act_status.setText(f"{display}: {label.get(data.status, data.status)}")
 
         if data.status in ("error", "offline"):
             self.setIcon(self._icon_err)
@@ -83,8 +84,7 @@ class BrotherTray(QSystemTrayIcon):
             self.setIcon(self._icon_ok)
 
         self.setToolTip(
-            f"Brother DCP-L2550DN  •  "
-            f"Toner: {data.toner_pct}%  •  Tamburo: {data.drum_pct}%"
+            f"{display}  •  Toner: {data.toner_pct}%  •  Tamburo: {data.drum_pct}%"
         )
 
     def notify(self, key: str, title: str, message: str,

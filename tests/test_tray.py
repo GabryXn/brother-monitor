@@ -3,16 +3,16 @@ import time
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtWidgets import QMainWindow
-from PyQt6.QtCore import QSettings
 from tray import BrotherTray, LEVEL_WARN
 from drivers.base import PrinterData
 from main_window import MainWindow
+from config import AppConfig, PrinterConfig
 
 
 @pytest.fixture
-def window(qtbot, tmp_path):
-    s = QSettings(str(tmp_path / "t.ini"), QSettings.Format.IniFormat)
-    w = MainWindow(s)
+def window(qtbot):
+    cfg = AppConfig(printers=[PrinterConfig()])
+    w = MainWindow(cfg, cfg.printers[0])
     qtbot.addWidget(w)
     return w
 
