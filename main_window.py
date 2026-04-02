@@ -39,6 +39,7 @@ class MainWindow(QMainWindow):
     refresh_requested = pyqtSignal()
     refresh_interval_changed = pyqtSignal(int)
     config_saved = pyqtSignal(AppConfig)
+    clear_history_requested = pyqtSignal()
 
     def __init__(self, cfg: AppConfig, printer_cfg: PrinterConfig, parent=None):
         super().__init__(parent)
@@ -50,6 +51,7 @@ class MainWindow(QMainWindow):
         tabs = QTabWidget()
         tabs.addTab(self._build_status_tab(),   "Stato")
         tabs.addTab(self._build_stats_tab(),    "Statistiche")
+        tabs.addTab(self._build_history_tab(),  "Storico")
         tabs.addTab(self._build_settings_tab(), "Impostazioni")
         self.setCentralWidget(tabs)
 
@@ -364,6 +366,50 @@ class MainWindow(QMainWindow):
         for i, err in enumerate(data.errors):
             self.tbl_errors.setItem(i, 0, QTableWidgetItem(err.get("desc", "")))
             self.tbl_errors.setItem(i, 1, QTableWidgetItem(str(err.get("page", 0))))
+
+    def _build_history_tab(self) -> QWidget:
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        hdr = QHBoxLayout()
+        hdr.addWidget(QLabel("Ultime letture:"))
+        hdr.addStretch()
+        btn_clear = QPushButton("Cancella storico")
+        btn_clear.setObjectName("btn_clear_history")
+        btn_clear.clicked.connect(self._clear_history_requested)
+        hdr.addWidget(btn_clear)
+        layout.addLayout(hdr)
+
+        self.tbl_history = QTableWidget(0, 5)
+        self.tbl_history.setHorizontalHeaderLabels(
+            ["Data/Ora", "Stato", "Toner %", "Tamburo %", "Pagine"])
+        hdr_h = self.tbl_history.horizontalHeader()
+        hdr_h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        hdr_h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        hdr_h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        hdr_h.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        hdr_h.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.tbl_history.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.tbl_history.setAlternatingRowColors(True)
+        layout.addWidget(self.tbl_history)
+
+        return widget
+
+    def update_history(self, rows: list[dict]) -> None:
+        """Populate the Storico tab with rows from HistoryDB.get_recent()."""
+        self.tbl_history.setRowCount(len(rows))
+        for i, row in enumerate(rows):
+            self.tbl_history.setItem(i, 0, QTableWidgetItem(row["timestamp"]))
+            self.tbl_history.setItem(i, 1, QTableWidgetItem(row["status"]))
+            self.tbl_history.setItem(i, 2, QTableWidgetItem(str(row["toner_pct"])))
+            self.tbl_history.setItem(i, 3, QTableWidgetItem(str(row["drum_pct"])))
+            self.tbl_history.setItem(i, 4, QTableWidgetItem(str(row["page_count"])))
+
+    def _clear_history_requested(self) -> None:
+        self.tbl_history.setRowCount(0)
+        self.clear_history_requested.emit()
 
     def closeEvent(self, event) -> None:
         event.ignore()

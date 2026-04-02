@@ -11,6 +11,7 @@ from PyQt6.QtCore import QTimer
 from config import load_config, save_config, AppConfig
 from drivers.base import PrinterData
 from drivers.brother_http import BrotherHTTPDriver
+from history import HistoryDB
 from main_window import MainWindow
 from tray import BrotherTray, LEVEL_WARN, LEVEL_CRIT
 
@@ -70,6 +71,7 @@ def main() -> None:
     window = MainWindow(cfg, printer_cfg)
     tray   = BrotherTray(window)
     tray.show()
+    history_db = HistoryDB()
 
     def do_refresh() -> None:
         data = driver.fetch()
@@ -77,6 +79,8 @@ def main() -> None:
         window.update_data(data, ts)
         tray.update_status(data, printer_cfg.name)
         _check_notifications(tray, data, printer_cfg, printer_cfg.name)
+        history_db.record(printer_cfg.name, data)
+        window.update_history(history_db.get_recent(printer_cfg.name, limit=200))
 
     window.refresh_requested.connect(do_refresh)
     tray._act_refresh.triggered.connect(do_refresh)
@@ -89,6 +93,9 @@ def main() -> None:
         lambda secs: poll_timer.setInterval(secs * 1000))
 
     window.config_saved.connect(lambda new_cfg: save_config(new_cfg))
+
+    window.clear_history_requested.connect(
+        lambda: history_db.clear(printer_cfg.name))
 
     do_refresh()
     sys.exit(app.exec())

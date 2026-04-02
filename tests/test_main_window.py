@@ -23,17 +23,18 @@ def window(qtbot, cfg, printer_cfg):
     return w
 
 
-def test_window_has_three_tabs(window):
+def test_window_has_four_tabs(window):
     tabs = window.findChild(QTabWidget)
     assert tabs is not None
-    assert tabs.count() == 3
+    assert tabs.count() == 4
 
 
 def test_window_tab_names(window):
     tabs = window.findChild(QTabWidget)
     assert tabs.tabText(0) == "Stato"
     assert tabs.tabText(1) == "Statistiche"
-    assert tabs.tabText(2) == "Impostazioni"
+    assert tabs.tabText(2) == "Storico"
+    assert tabs.tabText(3) == "Impostazioni"
 
 
 def test_update_data_status_idle(window):
