@@ -21,6 +21,9 @@ ORG_NAME = "gabry"
 def _make_driver(printer_cfg):
     if printer_cfg.driver == "brother_http":
         return BrotherHTTPDriver(base_url=printer_cfg.url)
+    if printer_cfg.driver == "snmp":
+        from drivers.snmp import SNMPDriver
+        return SNMPDriver(host=printer_cfg.host, community=printer_cfg.community)
     raise ValueError(f"Unknown driver: {printer_cfg.driver!r}")
 
 
