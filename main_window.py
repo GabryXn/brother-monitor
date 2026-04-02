@@ -302,8 +302,12 @@ class MainWindow(QMainWindow):
             AUTOSTART_PATH.unlink(missing_ok=True)
 
     def _print_test_page(self) -> None:
-        subprocess.Popen(["lp", "-d", "Brother_DCP_L2550DN",
-                          "/usr/share/cups/data/testprint"])
+        subprocess.Popen([
+            "lp", "-d", "Brother_DCP_L2550DN",
+            "-o", "media=A4",
+            "-o", "fit-to-page",
+            "/usr/share/cups/data/testprint",
+        ])
 
     def _save_settings(self) -> None:
         self.settings.setValue("notifications/enabled",
