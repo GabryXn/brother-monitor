@@ -10,7 +10,8 @@ from PyQt6.QtCore import QTimer, QSettings, Qt
 
 from main_window import MainWindow
 from tray import BrotherTray, LEVEL_WARN, LEVEL_CRIT
-from printer_client import PrinterClient, PrinterData
+from drivers.base import PrinterData
+from drivers.brother_http import BrotherHTTPDriver as PrinterClient
 
 APP_NAME = "brother-monitor"
 ORG_NAME  = "gabry"
@@ -56,7 +57,7 @@ def main() -> None:
         ORG_NAME, APP_NAME,
     )
 
-    client = PrinterClient()
+    client = PrinterClient(base_url="http://localhost:60000")
     window = MainWindow(settings)
     tray   = BrotherTray(window)
     tray.show()

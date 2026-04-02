@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtCore import QSettings
 from tray import BrotherTray, LEVEL_WARN
-from printer_client import PrinterData
+from drivers.base import PrinterData
 from main_window import MainWindow
 
 

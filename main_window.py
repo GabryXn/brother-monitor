@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QSettings, pyqtSignal
 
 from widgets import CircularGauge
-from printer_client import PrinterData
+from drivers.base import PrinterData
 
 AUTOSTART_PATH = Path.home() / ".config/autostart/brother-monitor.desktop"
 AUTOSTART_CONTENT = """\

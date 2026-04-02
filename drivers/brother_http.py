@@ -1,46 +1,31 @@
-# printer_client.py
+# drivers/brother_http.py
 from __future__ import annotations
-from dataclasses import dataclass, field
 import re
+
 import requests
 from bs4 import BeautifulSoup
 
-BASE_URL = "http://localhost:60000"
-TIMEOUT = 5
+from drivers.base import PrinterData, PrinterDriver
+
+_TIMEOUT = 5
 
 
-@dataclass
-class PrinterData:
-    status: str = "offline"        # idle / printing / sleep / offline / error
-    status_detail: str = ""
-    toner_pct: int = 0
-    drum_pct: int = 0
-    model: str = ""
-    serial: str = ""
-    firmware: str = ""
-    memory_mb: int = 0
-    page_count: int = 0
-    avg_coverage: float = 0.0
-    errors: list[dict[str, str | int]] = field(default_factory=list)   # [{"desc": str, "page": int}]
-    jams: dict[str, int] = field(default_factory=dict)
-    replace_counts: dict[str, int] = field(default_factory=dict)
-    page_stats: dict[str, int] = field(default_factory=dict)  # reserved for future per-tray page counts
+class BrotherHTTPDriver(PrinterDriver):
+    """Driver for Brother printers that expose a web UI at /general/*.html."""
 
-
-class PrinterClient:
-    def __init__(self, base_url: str = BASE_URL):
-        self.base_url = base_url
+    def __init__(self, base_url: str):
+        self.base_url = base_url.rstrip("/")
 
     def fetch(self) -> PrinterData:
         try:
             info_resp = requests.get(
                 f"{self.base_url}/general/information.html",
                 params={"kind": "item"},
-                timeout=TIMEOUT,
+                timeout=_TIMEOUT,
             )
             status_resp = requests.get(
                 f"{self.base_url}/general/status.html",
-                timeout=TIMEOUT,
+                timeout=_TIMEOUT,
             )
             data = _parse_info(info_resp.text)
             _parse_status(status_resp.text, data)
@@ -62,7 +47,7 @@ def _parse_info(html: str) -> PrinterData:
     if raw_model:
         data.model = re.sub(r"\s+", " ", raw_model.replace("\xa0", " ")).strip()
 
-    data.serial = _find(r"Serial\s+no\.\s+(\S+)") or ""
+    data.serial   = _find(r"Serial\s+no\.\s+(\S+)") or ""
     data.firmware = _find(r"Main\s+Firmware\s+Version\s+(\S+)") or ""
 
     mem = _find(r"Memory\s+Size\s+(\d+)\s+MB")
@@ -81,13 +66,11 @@ def _parse_info(html: str) -> PrinterData:
     if drum:
         data.drum_pct = int(drum)
 
-    # Toner viene DOPO Drum Unit nella stessa riga — cerca "Toner** 40%" ma non "Drum"
     toner = _find(r"Toner[*\s]*([\d]+)%")
     if toner:
         data.toner_pct = int(toner)
 
-    # Jams
-    jams: dict = {}
+    jams: dict[str, int] = {}
     for key, pat in [
         ("total",  r"Total\s+Paper\s+Jams\s+(\d+)"),
         ("tray1",  r"Jam\s+Tray\s+1\s+(\d+)"),
@@ -100,20 +83,20 @@ def _parse_info(html: str) -> PrinterData:
             jams[key] = int(v)
     data.jams = jams
 
-    # Replace counts
-    rc_match = re.search(r"Replace\s+Count\s+Toner\s+(\d+)\s+Drum\s+Unit\s+(\d+)", text, re.IGNORECASE)
-    if rc_match:
-        data.replace_counts = {"toner": int(rc_match.group(1)), "drum": int(rc_match.group(2))}
+    rc = re.search(
+        r"Replace\s+Count\s+Toner\s+(\d+)\s+Drum\s+Unit\s+(\d+)", text, re.IGNORECASE
+    )
+    if rc:
+        data.replace_counts = {"toner": int(rc.group(1)), "drum": int(rc.group(2))}
 
-    # Error history — righe tipo "1 Incepp. interno Page : 1109"
     errors = []
-    for m in re.finditer(r"\d+\s+([\w\s.'àèìòùÀÈÌÒÙ.-]{3,40}?)\s+Page\s*[:\s]+(\d+)", text):
+    for m in re.finditer(
+        r"\d+\s+([\w\s.'àèìòùÀÈÌÒÙ.-]{3,40}?)\s+Page\s*[:\s]+(\d+)", text
+    ):
         desc = m.group(1).strip()
-        page = int(m.group(2))
         if desc:
-            errors.append({"desc": desc, "page": page})
+            errors.append({"desc": desc, "page": int(m.group(2))})
     data.errors = errors[:10]
-
     return data
 
 

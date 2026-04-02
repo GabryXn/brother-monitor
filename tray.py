@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
 from PyQt6.QtGui import QIcon, QPixmap, QColor, QPainter
 from PyQt6.QtCore import Qt
 
-from printer_client import PrinterData
+from drivers.base import PrinterData
 
 LEVEL_INFO = QSystemTrayIcon.MessageIcon.Information
 LEVEL_WARN = QSystemTrayIcon.MessageIcon.Warning

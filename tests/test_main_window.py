@@ -3,7 +3,7 @@ import pytest
 from PyQt6.QtWidgets import QTabWidget
 from PyQt6.QtCore import QSettings
 from main_window import MainWindow
-from printer_client import PrinterData
+from drivers.base import PrinterData
 
 
 @pytest.fixture
