@@ -78,6 +78,6 @@ def test_notify_respects_debounce_timeout(tray):
     with patch.object(tray, "showMessage") as mock_show:
         tray.notify("toner", "T", "M", LEVEL_WARN)
         # Simula che sia passata 1 ora
-        tray._last_notified["toner"] = time.time() - 3601
+        tray._last_notified["toner"] = time.monotonic() - 3601
         tray.notify("toner", "T", "M", LEVEL_WARN)
         assert mock_show.call_count == 2

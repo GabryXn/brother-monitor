@@ -77,8 +77,7 @@ class BrotherTray(QSystemTrayIcon):
 
         if data.status in ("error", "offline"):
             self.setIcon(self._icon_err)
-        elif (data.toner_pct > 0 and data.toner_pct < 15) or \
-             (data.drum_pct  > 0 and data.drum_pct  < 10):
+        elif (data.toner_pct < 15) or (data.drum_pct < 10):
             self.setIcon(self._icon_warn)
         else:
             self.setIcon(self._icon_ok)
@@ -90,8 +89,8 @@ class BrotherTray(QSystemTrayIcon):
 
     def notify(self, key: str, title: str, message: str,
                level: QSystemTrayIcon.MessageIcon = LEVEL_WARN) -> None:
-        now = time.time()
-        if now - self._last_notified.get(key, 0) < self.DEBOUNCE_SECS:
+        now = time.monotonic()
+        if now - self._last_notified.get(key, float("-inf")) < self.DEBOUNCE_SECS:
             return
         self._last_notified[key] = now
         self.showMessage(title, message, level, 6000)
