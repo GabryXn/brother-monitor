@@ -3,6 +3,8 @@
 from __future__ import annotations
 import sys
 import os
+import signal
+import tempfile
 from datetime import datetime
 
 from PyQt6.QtWidgets import QApplication
@@ -54,7 +56,23 @@ def _check_notifications(tray: BrotherTray, data: PrinterData,
                         LEVEL_WARN)
 
 
+def _enforce_single_instance() -> None:
+    """Termina un'eventuale istanza precedente e registra il PID corrente."""
+    lock_path = os.path.join(tempfile.gettempdir(),
+                             f"printer-monitor-{os.getuid()}.pid")
+    if os.path.exists(lock_path):
+        try:
+            old_pid = int(open(lock_path).read().strip())
+            os.kill(old_pid, signal.SIGTERM)
+        except (ValueError, ProcessLookupError, PermissionError):
+            pass  # processo già terminato o PID non valido
+
+    with open(lock_path, "w") as f:
+        f.write(str(os.getpid()))
+
+
 def main() -> None:
+    _enforce_single_instance()
     os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
 
     app = QApplication(sys.argv)

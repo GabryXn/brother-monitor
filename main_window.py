@@ -140,12 +140,16 @@ class MainWindow(QMainWindow):
 
         self.lbl_updated = QLabel("Ultimo aggiornamento: —")
         self.lbl_updated.setStyleSheet("color: gray; font-size: 10px;")
+        btn_scan = QPushButton("Scansiona")
+        btn_scan.setObjectName("btn_scan")
+        btn_scan.clicked.connect(self._start_scan)
         btn_refresh = QPushButton("Aggiorna ora")
         btn_refresh.setObjectName("btn_refresh")
         btn_refresh.clicked.connect(self.refresh_requested)
         footer = QHBoxLayout()
         footer.addWidget(self.lbl_updated)
         footer.addStretch()
+        footer.addWidget(btn_scan)
         footer.addWidget(btn_refresh)
         root.addLayout(footer)
 
@@ -329,6 +333,9 @@ class MainWindow(QMainWindow):
         else:
             AUTOSTART_PATH.unlink(missing_ok=True)
 
+    def _start_scan(self) -> None:
+        subprocess.Popen(["xsane"])
+
     def _print_test_page(self) -> None:
         cups = self._printer_cfg.cups_printer
         if not cups:
@@ -336,7 +343,7 @@ class MainWindow(QMainWindow):
         subprocess.Popen([
             "lp", "-d", cups,
             "-o", "media=A4",
-            "-o", "fit-to-page",
+            "-o", "print-scaling=fit",
             "/usr/share/cups/data/testprint",
         ])
 

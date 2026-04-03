@@ -18,18 +18,46 @@ exec python3 /usr/local/lib/printer-monitor/brother_monitor.py "$@"
 EOF
 sudo chmod +x "$BIN_PATH"
 
-AUTOSTART_DIR="$HOME/.config/autostart"
-mkdir -p "$AUTOSTART_DIR"
-cat > "$AUTOSTART_DIR/printer-monitor.desktop" << EOF
+# Autostart per tutti gli utenti (XDG system-wide)
+AUTOSTART_DIR="/etc/xdg/autostart"
+sudo mkdir -p "$AUTOSTART_DIR"
+sudo tee "$AUTOSTART_DIR/printer-monitor.desktop" > /dev/null << EOF
 [Desktop Entry]
 Type=Application
 Name=Printer Monitor
 Exec=$BIN_PATH
 Icon=printer
 Comment=Monitoraggio stampanti di rete
+X-GNOME-Autostart-enabled=true
 X-KDE-autostart-enabled=true
 EOF
 
+# Systemd user service (disponibile per tutti gli utenti)
+SERVICE_DIR="/usr/lib/systemd/user"
+sudo mkdir -p "$SERVICE_DIR"
+sudo tee "$SERVICE_DIR/printer-monitor.service" > /dev/null << 'EOF'
+[Unit]
+Description=Printer Monitor tray application
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/printer-monitor
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONPATH=/usr/local/lib/printer-monitor
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+
+sudo systemctl daemon-reload
+
 echo "==> Installazione completata."
-echo "    Avvia con: printer-monitor"
-echo "    Si avvierà automaticamente al prossimo login KDE."
+echo "    Avvia con:                printer-monitor"
+echo "    Si avvierà automaticamente al login (XDG autostart per tutti gli utenti)."
+echo ""
+echo "    Per gestirlo via systemd (per utente):"
+echo "      systemctl --user enable --now printer-monitor"
+echo "      systemctl --user status printer-monitor"
