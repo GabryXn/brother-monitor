@@ -1,0 +1,123 @@
+# ═══════════════════════════════════════════════════════════════
+# Jules Agent Workflow — TEMPLATE
+# ═══════════════════════════════════════════════════════════════
+# Questo file viene deployato automaticamente nei repo target
+# dal workflow deploy-workflows.yml del jules-controller.
+#
+# Triggers:
+#   - workflow_dispatch: il controller lo chiama con un prompt
+#   - issues con label "jules": per programmare da telefono
+# ═══════════════════════════════════════════════════════════════
+
+name: Jules Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Prompt for Jules agent'
+        required: true
+        type: string
+
+  issues:
+    types: [labeled]
+
+jobs:
+  jules-dispatch:
+    runs-on: ubuntu-latest
+
+    # Per le issue: esegui solo se la label è "jules"
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && github.event.label.name == 'jules')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Global Config (Centralized Control)
+        id: check_config
+        run: |
+          echo "🔍 Fetching global configuration from master controller..."
+          
+          # Fetch the config from the master controller repo
+          CONFIG_RAW=$(curl -s --connect-timeout 5 --retry 3 "https://raw.githubusercontent.com/GabryXn/jules-controller/main/jules_config.yml")
+          
+          if [ -z "$CONFIG_RAW" ]; then
+            echo "⚠️  WARNING: Could not fetch global config (empty response or timeout)."
+            echo "Proceeding with default (enabled) for safety, but check connection to GabryXn/jules-controller."
+            CONFIG_JSON='{"features": {"issue_automation": true, "cyclic_automation": true}}'
+          else
+            CONFIG_JSON=$(echo "$CONFIG_RAW" | yq -o=json)
+            echo "✅ Global configuration fetched successfully."
+          fi
+          
+          if [ "${{ github.event_name }}" == "issues" ]; then
+            ENABLED=$(echo "$CONFIG_JSON" | jq -r '.features.issue_automation // true')
+            echo "Checking issue_automation: $ENABLED"
+          else
+            # For workflow_dispatch, the controller already checked, but we store for log consistency
+            ENABLED="true"
+            echo "Workflow triggered via dispatch (controller/manual). Automation is ENABLED."
+          fi
+          
+          if [ "$ENABLED" != "true" ]; then
+            echo "🛑 Automation is DISABLED in global config. Action will stop here."
+          fi
+
+          echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
+
+      - name: Invoke Jules (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch' && steps.check_config.outputs.enabled == 'true'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          prompt: |
+            DATABASE_CONTEXT: Lavora su questo repository GitHub.
+            USER_REQUEST_ORIGIN: Scheduled Dispatch (Calendar/Cron)
+            
+            --- TASK START ---
+            ${{ inputs.prompt }}
+            --- TASK END ---
+
+            ISTRUZIONI CRITICHE:
+            1. Sei un Senior Software Engineer. Agisci con autonomia.
+            2. Se il task richiede la creazione o modifica di un file, esegui il cambiamento DIRETTAMENTE.
+            3. Crea SEMPRE una Pull Request con le modifiche effettuate.
+            4. NON EFFETTUARE MAI IL MERGE della Pull Request. Il merge deve essere eseguito solo manualmente dall'utente.
+            5. Lavora sul branch di default del repository.
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ github.event.repository.default_branch }}
+
+      - name: Invoke Jules (issue trigger)
+        if: github.event_name == 'issues' && steps.check_config.outputs.enabled == 'true'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          prompt: |
+            DATABASE_CONTEXT: Lavora su questo repository GitHub.
+            USER_REQUEST_ORIGIN: GitHub Issue #${{ github.event.issue.number }}
+            
+            --- USER REQUEST START ---
+            Title: ${{ github.event.issue.title }}
+            
+            Body:
+            ${{ github.event.issue.body }}
+            --- USER REQUEST END ---
+
+            ISTRUZIONI: Analizza la richiesta sopra ed esegui i cambiamenti necessari seguendo le best practice del progetto.
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ github.event.repository.default_branch }}
+
+      - name: 📝 Execution Summary
+        if: always() && steps.check_config.outputs.enabled == 'true'
+        run: |
+          echo "### 🤖 Jules Execution Status" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ **Success**: Jules has processed the request." >> $GITHUB_STEP_SUMMARY
+            echo "If changes were needed, a **Pull Request** has been created in this repository." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Failed**: Something went wrong during Jules execution." >> $GITHUB_STEP_SUMMARY
+            echo "Check the logs of the previous steps for more details." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.event.repository.default_branch }}" >> $GITHUB_STEP_SUMMARY
