@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+uv sync --dev
 
 # Run all tests (headless, no display needed)
 pytest

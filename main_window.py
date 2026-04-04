@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QTabWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTableWidget, QTableWidgetItem, QSlider,
     QCheckBox, QComboBox, QGroupBox, QFormLayout, QHeaderView,
-    QScrollArea, QFrame, QSizePolicy,
+    QScrollArea, QFrame, QSizePolicy, QMessageBox,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -334,7 +334,19 @@ class MainWindow(QMainWindow):
             AUTOSTART_PATH.unlink(missing_ok=True)
 
     def _start_scan(self) -> None:
-        subprocess.Popen(["xsane"])
+        for cmd in ("simple-scan", "xsane", "gscan2pdf"):
+            try:
+                subprocess.Popen([cmd])
+                return
+            except FileNotFoundError:
+                continue
+        QMessageBox.warning(
+            self,
+            "Scanner non trovato",
+            "Nessun programma di scansione trovato.\n"
+            "Installa simple-scan:\n\n"
+            "  sudo apt install simple-scan",
+        )
 
     def _print_test_page(self) -> None:
         cups = self._printer_cfg.cups_printer
