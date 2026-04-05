@@ -1,6 +1,7 @@
 # tray.py
 from __future__ import annotations
 import time
+import os
 
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
 from PyQt6.QtGui import QIcon, QPixmap, QColor, QPainter
@@ -14,15 +15,26 @@ LEVEL_CRIT = QSystemTrayIcon.MessageIcon.Critical
 
 
 def _make_icon(color: str) -> QIcon:
-    """Genera un'icona circolare del colore dato senza file esterni."""
-    px = QPixmap(22, 22)
-    px.fill(Qt.GlobalColor.transparent)
-    p = QPainter(px)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.setBrush(QColor(color))
-    p.setPen(Qt.PenStyle.NoPen)
-    p.drawEllipse(2, 2, 18, 18)
-    p.end()
+    """Genera un'icona SVG del colore dato usando il file esterno."""
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Printer--Streamline-Plump.svg")
+    try:
+        with open(icon_path, "r", encoding="utf-8") as f:
+            svg_content = f.read()
+    except Exception:
+        # Fallback all'icona circolare se il file non è trovato o c'è un errore
+        px = QPixmap(22, 22)
+        px.fill(Qt.GlobalColor.transparent)
+        p = QPainter(px)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setBrush(QColor(color))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(2, 2, 18, 18)
+        p.end()
+        return QIcon(px)
+
+    svg_content = svg_content.replace("#000000", color)
+    px = QPixmap()
+    px.loadFromData(svg_content.encode("utf-8"))
     return QIcon(px)
 
 

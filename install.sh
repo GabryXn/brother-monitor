@@ -9,6 +9,7 @@ echo "==> Installazione Printer Monitor..."
 sudo mkdir -p "$INSTALL_DIR"
 sudo cp -- brother_monitor.py config.py history.py \
            main_window.py tray.py widgets.py "$INSTALL_DIR/"
+sudo cp -- *.svg "$INSTALL_DIR/" 2>/dev/null || true
 sudo cp -r drivers "$INSTALL_DIR/"
 
 sudo tee "$BIN_PATH" > /dev/null << 'EOF'
