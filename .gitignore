@@ -4,3 +4,8 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+
+# >>> GitSync-KDE (auto-managed — do not remove) >>>
+# KDE folder icon (managed by GitSync-KDE)
+.directory
+# <<< GitSync-KDE <<<
