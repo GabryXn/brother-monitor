@@ -4,7 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import yaml
 
-_CONFIG_PATH = Path.home() / ".config" / "gabry" / "printer-monitor.yaml"
+_CONFIG_PATH = Path.home() / ".config" / "printer-monitor" / "config.yaml"
+_CONFIG_PATH_LEGACY = Path.home() / ".config" / "gabry" / "printer-monitor.yaml"
 
 
 @dataclass
@@ -34,7 +35,14 @@ class AppConfig:
 
 
 def load_config(path: Path = _CONFIG_PATH) -> AppConfig:
-    """Load config from YAML. Returns defaults if file does not exist."""
+    """Load config from YAML. Returns defaults if file does not exist.
+
+    Automatically migrates from the legacy path (~/.config/gabry/) on first run.
+    """
+    if not path.exists() and path == _CONFIG_PATH and _CONFIG_PATH_LEGACY.exists():
+        # Silent migration: copy legacy config to new location
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_CONFIG_PATH_LEGACY.read_text())
     if not path.exists():
         return AppConfig()
     raw = yaml.safe_load(path.read_text()) or {}

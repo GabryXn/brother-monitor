@@ -5,6 +5,12 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
+# Claude Code local settings (per-machine, not for sharing)
+.claude/
+
+# Internal planning notes (contain local paths)
+docs/superpowers/
+
 # >>> GitSync-KDE (auto-managed — do not remove) >>>
 # KDE folder icon (managed by GitSync-KDE)
 .directory

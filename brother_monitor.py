@@ -18,7 +18,7 @@ from main_window import MainWindow
 from tray import BrotherTray, LEVEL_WARN, LEVEL_CRIT
 
 APP_NAME = "printer-monitor"
-ORG_NAME = "gabry"
+ORG_NAME = "printer-monitor"
 
 
 def _make_driver(printer_cfg):

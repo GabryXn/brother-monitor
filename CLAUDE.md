@@ -9,42 +9,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uv sync --dev
 
 # Run all tests (headless, no display needed)
-pytest
+uv run pytest
 
 # Run a single test file
-pytest tests/test_printer_client.py
+uv run pytest tests/test_brother_http_driver.py
 
 # Run a single test by name
-pytest tests/test_printer_client.py::test_parse_info_toner_drum
+uv run pytest tests/test_brother_http_driver.py::test_parse_info_toner_drum
 
 # Run the application
-python brother_monitor.py
+uv run python brother_monitor.py
 
-# Install system-wide (copies files to /usr/local/lib/brother-monitor)
+# Install system-wide
 bash install.sh
 ```
 
 ## Architecture
 
-The app is a **PyQt6 system tray monitor** for a Brother DCP-L2550DN printer. It polls the printer's built-in web interface (proxied at `http://localhost:60000`) and shows status in a tray icon and optional window.
+The app is a **PyQt6 system tray monitor** for network printers. It polls printers via HTTP (Brother web interface) or SNMP and shows status in a tray icon and optional window.
 
 **Data flow:**
-1. `PrinterClient.fetch()` (in `printer_client.py`) makes two HTTP GET requests to the printer's web UI:
-   - `/general/information.html?kind=item` → parsed by `_parse_info()` for device info, toner/drum %, counters, jams, errors
-   - `/general/status.html` → parsed by `_parse_status()` for current status (`idle`/`sleep`/`printing`/`error`/`offline`)
-2. `brother_monitor.py` (the entry point) owns a `QTimer` for polling and wires everything together: `PrinterClient` → `MainWindow.update_data()` + `BrotherTray.update_status()` + `_check_notifications()`
+1. Each `PrinterDriver.fetch()` returns a `PrinterData` dataclass.
+2. `brother_monitor.py` owns one `QTimer` per printer and wires: driver → `MainWindow.update_data()` + `BrotherTray.update_all_statuses()` + `_check_notifications()`
 
 **Key modules:**
-- `printer_client.py` — pure data layer; `PrinterData` dataclass + HTML scraping via BeautifulSoup/regex. No Qt dependency.
-- `tray.py` — `BrotherTray(QSystemTrayIcon)`: colored dot icons generated programmatically (no external image files), tray menu, and debounced desktop notifications (1 notification per key per 60 min).
-- `main_window.py` — `MainWindow(QMainWindow)`: 3-tab window (Stato/Statistiche/Impostazioni). Emits `refresh_requested` signal and `refresh_interval_changed` signal. Closing the window hides it rather than quitting.
+- `drivers/base.py` — `PrinterDriver` ABC and `PrinterData` dataclass. No Qt dependency.
+- `drivers/brother_http.py` — scrapes the Brother printer's built-in web UI via HTTP.
+- `drivers/snmp.py` — polls printers via SNMP OIDs.
+- `config.py` — YAML config at `~/.config/printer-monitor/config.yaml`. `load_config` / `save_config`.
+- `history.py` — `HistoryDB`: SQLite storage for per-printer readings.
+- `tray.py` — `BrotherTray(QSystemTrayIcon)`: SVG tray icon, tray menu, debounced desktop notifications (1 per key per 60 min).
+- `main_window.py` — `MainWindow(QMainWindow)`: 4-tab window (Stato/Statistiche/Storico/Impostazioni). Emits `refresh_requested`, `refresh_interval_changed`, `config_saved`, `printer_selected`, `clear_history_requested`.
 - `widgets.py` — `CircularGauge(QWidget)`: custom-painted arc gauge for toner/drum percentages.
-- `brother_monitor.py` — entry point; creates `QApplication`, `QSettings` (INI format at `~/.config/gabry/brother-monitor.ini`), and connects signals between components.
+- `brother_monitor.py` — entry point; creates `QApplication` and connects signals.
 
-**Settings keys** (stored via `QSettings`):
-- `notifications/enabled` (bool, default True)
-- `notifications/toner_threshold` (int %, default 20)
-- `notifications/drum_threshold` (int %, default 15)
-- `polling/interval_sec` (int, default 60)
-
-**Tests** use `pytest-qt` with `QT_QPA_PLATFORM=offscreen` (set in `conftest.py`). HTML fixtures in `conftest.py` are modeled after the real printer's output. `PrinterClient` is tested by mocking `requests.get`.
+**Tests** use `pytest-qt` with `QT_QPA_PLATFORM=offscreen` (set in `conftest.py`). Drivers are tested by mocking HTTP responses. `tmp_path` fixture used for config and DB tests.
