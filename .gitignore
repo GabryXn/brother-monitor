@@ -5,6 +5,19 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
+# Environment & secrets
+.env
+.env.*
+*.log
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+*.secret
+credentials*.json
+service-account*.json
+
 # Claude Code local settings (per-machine, not for sharing)
 .claude/
 

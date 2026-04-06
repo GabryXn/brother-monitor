@@ -44,3 +44,15 @@ The app is a **PyQt6 system tray monitor** for network printers. It polls printe
 - `brother_monitor.py` — entry point; creates `QApplication` and connects signals.
 
 **Tests** use `pytest-qt` with `QT_QPA_PLATFORM=offscreen` (set in `conftest.py`). Drivers are tested by mocking HTTP responses. `tmp_path` fixture used for config and DB tests.
+
+## ⚠️ Repository Pubblica — Sicurezza
+
+Questo progetto ha una **repository GitHub pubblica**. Rispettare sempre queste regole:
+
+- **Non includere mai** chiavi API, token, password, credenziali o segreti nel codice o nei commit
+- Usare **variabili d'ambiente** per tutti i valori sensibili; il file `.env` non va mai committato
+- Verificare che `.gitignore` escluda `.env`, `*.key`, `*.pem` e qualsiasi file con segreti
+- **Non loggare** dati sensibili (token, credenziali, risposte API con dati privati)
+- Non includere URL interni, IP privati o dettagli di infrastruttura interna nel codice o nei commenti
+- I messaggi di commit devono essere appropriati per una audience pubblica
+- Revisionare ogni diff prima del push per escludere esposizioni accidentali di dati sensibili
