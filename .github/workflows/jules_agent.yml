@@ -41,7 +41,7 @@ jobs:
           echo "🔍 Fetching global configuration from master controller..."
           
           # Fetch the config from the master controller repo
-          CONFIG_RAW=$(curl -s --connect-timeout 5 --retry 3 "https://raw.githubusercontent.com/GabryXn/jules-controller/main/jules_config.yml")
+          CONFIG_RAW=$(curl -s --connect-timeout 5 --retry 3 "https://raw.githubusercontent.com/GabryXn/jules-controller/master/jules_config.yml")
           
           if [ -z "$CONFIG_RAW" ]; then
             echo "⚠️  WARNING: Could not fetch global config (empty response or timeout)."
