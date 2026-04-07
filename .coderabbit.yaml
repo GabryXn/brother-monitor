@@ -1,0 +1,49 @@
+# ═══════════════════════════════════════════════════════════════
+# CodeRabbit Configuration — AUTO-DEPLOYED
+# ═══════════════════════════════════════════════════════════════
+# Questo file viene deployato automaticamente nei repo PUBBLICI
+# dal master-setup.yml del jules-controller.
+#
+# CodeRabbit è gratuito per i repo open source e fornisce
+# review automatiche di alta qualità su ogni PR.
+# ═══════════════════════════════════════════════════════════════
+
+language: it
+
+reviews:
+  # Review automatica su ogni PR
+  auto_review:
+    enabled: true
+    # Ignora file non rilevanti
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+    path_filters:
+      - "!**/*.lock"
+      - "!**/pnpm-lock.yaml"
+      - "!**/uv.lock"
+      - "!**/package-lock.json"
+      - "!**/*.min.js"
+      - "!**/*.min.css"
+
+  # Livello di severità: focus su bug reali, non style
+  profile: assertive
+
+  request_changes_workflow: false
+
+  # High-level summary in italiano
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+
+  poem: false
+
+chat:
+  auto_reply: true
+
+tone_instructions: >
+  Sei un senior code reviewer. Concentrati su:
+  1. Bug e errori logici
+  2. Vulnerabilità di sicurezza
+  3. Breaking changes
+  Ignora: stile, formattazione, naming conventions minori.
+  Rispondi in italiano. Sii conciso e diretto.
