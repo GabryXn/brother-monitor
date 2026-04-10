@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
-from config import AppConfig, PrinterConfig
+from config import AppConfig
 from drivers.base import PrinterData
 from widgets import CircularGauge
 

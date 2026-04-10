@@ -1,6 +1,4 @@
 # tests/test_widgets.py
-import pytest
-from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QColor
 from widgets import CircularGauge
 

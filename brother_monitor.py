@@ -10,7 +10,7 @@ from datetime import datetime
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 
-from config import load_config, save_config, AppConfig
+from config import load_config, save_config
 from drivers.base import PrinterData
 from drivers.brother_http import BrotherHTTPDriver
 from history import HistoryDB
