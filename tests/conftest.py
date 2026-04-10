@@ -1,5 +1,4 @@
 import os
-import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # HTML campione fedele alla stampante reale (estratto da localhost:60000)

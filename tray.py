@@ -9,7 +9,9 @@ from PyQt6.QtCore import Qt
 
 from drivers.base import PrinterData
 
+# UNUSED: verifica se eliminabile invece di cancellarla
 LEVEL_INFO = QSystemTrayIcon.MessageIcon.Information
+
 LEVEL_WARN = QSystemTrayIcon.MessageIcon.Warning
 LEVEL_CRIT = QSystemTrayIcon.MessageIcon.Critical
 
@@ -81,6 +83,7 @@ class BrotherTray(QSystemTrayIcon):
 
     # ------------------------------------------------------------------ #
 
+    # UNUSED: verifica se eliminabile invece di cancellarla
     def update_status(self, data: PrinterData, printer_name: str = "") -> None:
         label = {"idle": "Pronto", "sleep": "Risparmio",
                  "printing": "Stampa in corso...",

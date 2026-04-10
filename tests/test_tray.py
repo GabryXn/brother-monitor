@@ -1,8 +1,7 @@
 # tests/test_tray.py
 import time
 import pytest
-from unittest.mock import MagicMock, patch
-from PyQt6.QtWidgets import QMainWindow
+from unittest.mock import patch
 from tray import BrotherTray, LEVEL_WARN
 from drivers.base import PrinterData
 from main_window import MainWindow

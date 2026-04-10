@@ -1,7 +1,5 @@
 # tests/test_config.py
-import pytest
-from pathlib import Path
-from config import AppConfig, PrinterConfig, NotifConfig, load_config, save_config
+from config import load_config, save_config
 
 
 def test_default_config_has_one_printer(tmp_path):

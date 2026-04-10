@@ -1,6 +1,5 @@
 # tests/test_history.py
 import pytest
-from pathlib import Path
 from history import HistoryDB
 from drivers.base import PrinterData
 
