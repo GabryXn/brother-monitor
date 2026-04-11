@@ -46,7 +46,7 @@ class SNMPDriver(PrinterDriver):
                 ObjectType(ObjectIdentity(oid)),
             )
         )
-        if error_indication or error_status:
+        if error_indication or error_status or not var_binds:
             return None
         return int(var_binds[0][1])
 
