@@ -45,7 +45,12 @@ def load_config(path: Path = _CONFIG_PATH) -> AppConfig:
         path.write_text(_CONFIG_PATH_LEGACY.read_text())
     if not path.exists():
         return AppConfig()
-    raw = yaml.safe_load(path.read_text()) or {}
+    try:
+        raw = yaml.safe_load(path.read_text())
+    except Exception:
+        raw = None
+    if not isinstance(raw, dict):
+        raw = {}
     printers = []
     for p in raw.get("printers", []):
         notif_raw = p.get("notifications", {})

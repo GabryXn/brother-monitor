@@ -61,7 +61,10 @@ class SNMPDriver(PrinterDriver):
             data = PrinterData()
             data.toner_pct = _pct(toner_level, toner_max)
             data.drum_pct  = _pct(drum_level,  drum_max)
-            data.status    = _HR_STATUS.get(hr_status, "idle") if hr_status else "idle"
+            if hr_status is None:
+                data.status = "offline"
+            else:
+                data.status = _HR_STATUS.get(hr_status, "idle")
             return data
         except Exception:
             return PrinterData(status="offline")
