@@ -62,9 +62,10 @@ def _enforce_single_instance() -> None:
                              f"printer-monitor-{os.getuid()}.pid")
     if os.path.exists(lock_path):
         try:
-            old_pid = int(open(lock_path).read().strip())
+            with open(lock_path, "r") as f:
+                old_pid = int(f.read().strip())
             os.kill(old_pid, signal.SIGTERM)
-        except (ValueError, ProcessLookupError, PermissionError):
+        except (ValueError, ProcessLookupError, PermissionError, FileNotFoundError):
             pass  # processo già terminato o PID non valido
 
     with open(lock_path, "w") as f:
